@@ -12,9 +12,10 @@ It will install extra dependecies to use you program as a PyGeoAPI process
 
 ## CLI
 
-**Command name**: `arpav-retriever`
-
-**Usage example (N.B. use today date)**: `arpav-retriever --lat_range 45.28 45.63 --long_range 11.95 12.46 --time_range 2025-09-15T09:00:00 2025-09-15T14:00:00 --variable water_level --out out_water_level.geojson --debug`
+**Command name**: `arpav-retriever` **[N.B. keep date-range inside last 24 hours]** 
+```
+arpav-retriever --lat_range 45.28 45.63 --long_range 11.95 12.46 --time_range 2025-09-15T09:00:00 2025-09-15T14:00:00 --variable water_level --out out_water_level.geojson --debug
+```
 
 ### Arguments
 
