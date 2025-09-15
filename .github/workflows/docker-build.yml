@@ -1,0 +1,97 @@
+name: Docker Build and Push to ECR
+
+on:
+  workflow_dispatch:
+    inputs:
+      tags:
+        description: "Please provide a git tag value, e.g. v1.0.1"
+        required: true
+        type: string
+        default: "v1.0.1-manually-triggered.1"
+  push:
+    tags: 
+      - "dev-v*"
+
+jobs:
+  build-application:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+    
+    - name: Get Git Tag Message
+      id: tag_message
+      run: |
+        tag_message=$(git for-each-ref --format='%(contents)' refs/tags/${{ env.tag }})
+        echo "message=$tag_message" >> $GITHUB_ENV
+
+    - name: Configure AWS Credentials
+      uses: aws-actions/configure-aws-credentials@v1
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: us-east-1
+
+    - name: Login to Amazon ECR
+      id: login-ecr
+      uses: aws-actions/amazon-ecr-login@v1
+    
+    - name: Extract Git Tag
+      id: extract-tag
+      run: echo "tag=${GITHUB_REF##*/}" >> $GITHUB_ENV
+
+    - name: Build Docker Image
+      env:
+        ECR_REPO: ${{ secrets.ECR_REPOSITORY_NAME }}
+        TAG: ${{ env.tag }}
+      run: |
+        echo "Building Docker image with tag: $TAG"
+        docker build  -t $ECR_REPO:${GITHUB_SHA::8} .
+
+    - name: Test Docker Image
+      env:
+        ECR_REPO: ${{ secrets.ECR_REPOSITORY_NAME }}
+        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        TAG: ${{ env.tag }}
+      run: |
+        echo "env.message: ${{ env.message }}"
+        if [[ "${{ env.message }}" == *"no-test"* ]]; then
+          echo "Skipping tests as per commit message."
+          exit 0
+        fi
+        echo "Testing Docker image with tag: $TAG"
+        docker run --env AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID --env AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY $ECR_REPO:${GITHUB_SHA::8} python tests/test_xyz.py
+
+    - name: Tag and Push Docker Image
+      env:
+        ECR_REPO: ${{ secrets.ECR_REPOSITORY_NAME }}
+        TAG: ${{ env.tag }}
+      run: |
+        echo "Tagging and pushing Docker image with tag: $TAG"
+        docker tag $ECR_REPO:${GITHUB_SHA::8} $ECR_REPO:$TAG
+        docker tag $ECR_REPO:${GITHUB_SHA::8} $ECR_REPO:latest
+        docker push $ECR_REPO:${GITHUB_SHA::8}
+        docker push $ECR_REPO:$TAG
+        docker push $ECR_REPO:latest
+        
+    - name: create or update eedem lambda function
+      env:
+        ECR_REPO: ${{ secrets.ECR_REPOSITORY_NAME }}
+        TAG: ${{ env.tag }}
+      run: |
+        fname=process-arpav-retriever
+        image=$ECR_REPO:$TAG
+        image_config='{"EntryPoint":["python","-m","awslambdaric"],"Command":["lambda_function.lambda_handler"]}'
+        
+        if aws lambda get-function --function-name "$fname" > /dev/null 2>&1; then
+            aws lambda update-function-code --function-name "$fname" --image-uri "$image" > /dev/null
+            
+        else
+            echo "Creating a new lambda function $fname ..."
+            aws lambda create-function --function-name "$fname" --package-type Image --code ImageUri="$image" --role arn:aws:iam::901702069075:role/lambda-s3 --timeout 30 --memory-size 512 --region us-east-1 --image-config "$image_config" > /dev/null
+        fi
+
+        echo "done!"
+    
+    

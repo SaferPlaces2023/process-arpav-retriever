@@ -1,0 +1,8 @@
+
+venv/
+build
+.vscode/
+src/*.egg-info/
+dist/
+.env
+tests/**.tif

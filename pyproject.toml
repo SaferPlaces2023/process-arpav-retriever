@@ -1,0 +1,46 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "process-arpav-retriever"
+version = "1.0.3"
+description = "PyGeoAPI process to retrieve ARPAV sensor data"
+readme = ""
+authors = [
+  { name="Tommaso Redaelli", email="tommaso.redaelli@gecosistema.com" }
+]
+license = { text = "MIT" }
+keywords = []
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: OS Independent"
+]
+
+dependencies = [
+  "python-dotenv",
+  "click",
+  "pandas",
+  "geopandas",
+  "requests",
+  "boto3"
+]
+
+[project.optional-dependencies]
+pygeoapi = [
+  "pygeoapi",
+]
+
+[project.urls]
+Homepage = "https://github.com/saferplaces/process-arpav-retriever"
+
+[project.scripts]
+arpav-retriever = "process_arpav_retriever.main:cli_run_arpav_retriever"
+arpav_retriever = "process_arpav_retriever.main:cli_run_arpav_retriever"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
