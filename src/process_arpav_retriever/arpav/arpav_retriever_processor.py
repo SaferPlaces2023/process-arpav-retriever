@@ -194,7 +194,7 @@ class ARPAVRetrieverProcessor(BaseProcessor):
             raise StatusException(StatusException.INVALID, 'variable must be either "precipitation" or "water_level"')
         self.variable = variable
 
-        self._tmp_data_folder = _ARPAV_RETRIEVERS[self.variable]
+        self._tmp_data_folder = _ARPAV_RETRIEVERS[self.variable]._tmp_data_folder
         if not os.path.exists(self._tmp_data_folder):
             os.makedirs(self._tmp_data_folder)
 
