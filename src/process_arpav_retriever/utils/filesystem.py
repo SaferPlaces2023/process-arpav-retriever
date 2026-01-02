@@ -224,18 +224,25 @@ def md5text(text):
 
 def garbage_folders(*folders):
     """
-    Remove all files in folders from the filesystem (but not the folder itself).
+    Remove all files and subfolders inside the given folders (but not the folders themselves).
     """
     for folder in folders:
-        contents_fns = glob.glob(f'{folder}/*', recursive=True)
-        for content in contents_fns:
-            if os.path.isfile(content):
+        # Skip if folder does not exist
+        if not os.path.isdir(folder):
+            print(f"Folder not found: {folder}")
+            continue
+
+        for entry in os.listdir(folder):
+            path = os.path.join(folder, entry)
+
+            if os.path.isfile(path) or os.path.islink(path):
                 try:
-                    os.remove(content)
+                    os.remove(path)
                 except Exception as e:
-                    print(f"Error removing file {content}: {e}")
-            elif os.path.isdir(content):
+                    print(f"Error removing file {path}: {e}")
+
+            elif os.path.isdir(path):
                 try:
-                    shutil.rmtree(content, ignore_errors=True)
+                    shutil.rmtree(path, ignore_errors=True)
                 except Exception as e:
-                    print(f"Error removing directory {content}: {e}")
+                    print(f"Error removing directory {path}: {e}")
